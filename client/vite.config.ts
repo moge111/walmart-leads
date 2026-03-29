@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/walmart-leads/',
+  base: process.env.VITE_BASE_PATH || '/',
   server: {
     proxy: {
       '/api': 'http://localhost:3001',

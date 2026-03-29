@@ -30,6 +30,7 @@ jobs:
         working-directory: client
         env:
           VITE_API_URL: ${{ vars.API_URL }}
+          VITE_BASE_PATH: /walmart-leads/
         run: npx vite build
 
       - uses: actions/upload-pages-artifact@v3

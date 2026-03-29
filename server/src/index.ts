@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "path";
 import { initializeDatabase } from "./db/schema.js";
 import { createBot } from "./bot.js";
 import leadsRouter from "./routes/leads.js";
@@ -27,6 +28,13 @@ app.use("/api/route", routesRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Serve built client files
+const clientDist = path.join(process.cwd(), "client", "dist");
+app.use(express.static(clientDist));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(clientDist, "index.html"));
 });
 
 app.listen(PORT, () => {
