@@ -1,0 +1,5 @@
+{
+  "name": "walmart-leads",
+  "private": true,
+  "workspaces": ["server", "client"]
+}

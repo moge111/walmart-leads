@@ -1,0 +1,142 @@
+import { getDb } from "../db/index.js";
+
+export interface AggregatedStore {
+  storeId: number;
+  storeNumber: number;
+  city: string;
+  state: string;
+  address: string;
+  zip: string;
+  distanceMiles: number;
+  dealCount: number;
+  totalProfit: number;
+  totalQty: number;
+  score: number;
+  deals: StoreDeal[];
+}
+
+export interface StoreDeal {
+  dealId: number;
+  productId: number;
+  productName: string;
+  productUrl: string | null;
+  msrp: number;
+  storePrice: number;
+  netProfit: number;
+  roi: number;
+  floorQty: number;
+  backroomQty: number;
+  aisle: string | null;
+  isLowestPrice: boolean;
+  excluded: boolean;
+}
+
+export function getAggregatedStores(hoursBack = 24): AggregatedStore[] {
+  const db = getDb();
+
+  const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
+  const minProfit = parseFloat(process.env.MIN_PROFIT_PER_UNIT || "5");
+
+  const storeRows = db.prepare(`
+    SELECT
+      s.id as store_id,
+      s.store_number,
+      s.city,
+      s.state,
+      s.address,
+      s.zip,
+      s.distance_miles,
+      COUNT(CASE WHEN sd.excluded = 0 THEN 1 END) as deal_count,
+      SUM(CASE WHEN sd.excluded = 0 THEN sd.unit_profit * (sd.floor_qty + sd.backroom_qty) ELSE 0 END) as total_profit,
+      SUM(CASE WHEN sd.excluded = 0 THEN sd.floor_qty + sd.backroom_qty ELSE 0 END) as total_qty
+    FROM stores s
+    JOIN store_deals sd ON sd.store_id = s.id
+    WHERE sd.created_at >= ?
+      AND sd.aisle IS NOT NULL AND sd.aisle != ''
+      AND sd.unit_profit >= ?
+    GROUP BY s.id
+    HAVING total_qty > 0
+    ORDER BY (total_profit / NULLIF(s.distance_miles, 0)) DESC
+  `).all(cutoff, minProfit) as Array<{
+    store_id: number;
+    store_number: number;
+    city: string;
+    state: string;
+    address: string;
+    zip: string;
+    distance_miles: number;
+    deal_count: number;
+    total_profit: number;
+    total_qty: number;
+  }>;
+
+  const dealStmt = db.prepare(`
+    SELECT
+      sd.id as deal_id,
+      p.id as product_id,
+      p.name as product_name,
+      p.product_url,
+      p.msrp,
+      sd.store_price,
+      sd.unit_profit,
+      sd.floor_qty,
+      sd.backroom_qty,
+      sd.aisle,
+      sd.is_lowest_price,
+      sd.excluded
+    FROM store_deals sd
+    JOIN products p ON p.id = sd.product_id
+    WHERE sd.store_id = ? AND sd.created_at >= ?
+      AND sd.aisle IS NOT NULL AND sd.aisle != ''
+      AND sd.unit_profit >= ?
+  `);
+
+  return storeRows.map((row) => {
+    const deals = dealStmt.all(row.store_id, cutoff, minProfit) as Array<{
+      deal_id: number;
+      product_id: number;
+      product_name: string;
+      product_url: string | null;
+      msrp: number;
+      store_price: number;
+      unit_profit: number;
+      floor_qty: number;
+      backroom_qty: number;
+      aisle: string | null;
+      is_lowest_price: number;
+      excluded: number;
+    }>;
+
+    const distanceMiles = row.distance_miles || 1;
+    const totalProfit = row.total_profit || 0;
+
+    return {
+      storeId: row.store_id,
+      storeNumber: row.store_number,
+      city: row.city,
+      state: row.state,
+      address: row.address,
+      zip: row.zip,
+      distanceMiles: row.distance_miles,
+      dealCount: row.deal_count,
+      totalProfit,
+      totalQty: row.total_qty,
+      score: Math.round((totalProfit / distanceMiles) * 100) / 100,
+      deals: deals.map((d) => ({
+        dealId: d.deal_id,
+        productId: d.product_id,
+        productName: d.product_name,
+        productUrl: d.product_url,
+        msrp: d.msrp,
+        storePrice: d.store_price,
+        netProfit: d.unit_profit,
+        roi: d.store_price > 0 ? Math.round((d.unit_profit / d.store_price) * 100) : 0,
+        floorQty: d.floor_qty,
+        backroomQty: d.backroom_qty,
+        aisle: d.aisle,
+        isLowestPrice: d.is_lowest_price === 1,
+        excluded: d.excluded === 1,
+      })),
+    };
+  });
+}
