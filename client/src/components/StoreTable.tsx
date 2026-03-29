@@ -139,90 +139,133 @@ export function StoreTable({ stores, onUpdate }: Props) {
                     {store.address}, {store.zip}
                   </div>
 
-                  <div className="overflow-x-auto -mx-2 px-2">
-                  <table className="w-full text-[13px] min-w-[600px]">
-                    <thead>
-                      <tr style={{ color: C.muted }}>
-                        <th className="pb-2 text-left text-[10px] tracking-widest uppercase font-normal">Product</th>
-                        <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal">Buy</th>
-                        <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal">Sells</th>
-                        <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal">Net</th>
-                        <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal">ROI</th>
-                        <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal">Qty</th>
-                        <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal">Aisle</th>
-                        <th className="pb-2 w-14"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {store.deals.map((deal) => (
-                        <tr key={deal.dealId} style={{ opacity: deal.excluded ? 0.25 : 1, borderTop: `1px solid ${C.border}` }}>
-                          <td className="py-2 pr-3">
+                  {/* Desktop table */}
+                  <div className="hidden md:block">
+                    <table className="w-full text-[13px]">
+                      <thead>
+                        <tr style={{ color: C.muted }}>
+                          <th className="pb-2 text-left text-[10px] tracking-widest uppercase font-normal">Product</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-16">Buy</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-16">Sells</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-16">Net</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-14">ROI</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-10">Qty</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-16">Aisle</th>
+                          <th className="pb-2 w-14"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {store.deals.map((deal) => (
+                          <tr key={deal.dealId} style={{ opacity: deal.excluded ? 0.25 : 1, borderTop: `1px solid ${C.border}` }}>
+                            <td className="py-2 pr-4">
+                              {deal.productUrl ? (
+                                <a href={deal.productUrl} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-2" style={{ color: C.gold }}>
+                                  {deal.productName}
+                                </a>
+                              ) : (
+                                <span style={{ color: C.text }}>{deal.productName}</span>
+                              )}
+                              {deal.isLowestPrice && <span className="ml-1.5 text-[9px] px-1 py-px rounded-sm" style={{ background: "rgba(212,162,78,0.12)", color: C.amber, border: "1px solid rgba(212,162,78,0.15)" }}>LOW</span>}
+                            </td>
+                            <td className="py-2 text-right tabular-nums" style={{ color: C.amber }}>${deal.storePrice.toFixed(2)}</td>
+                            <td className="py-2 text-right">
+                              {editingMsrp?.dealId === deal.dealId ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <input type="number" step="0.01" value={editingMsrp.value}
+                                    onChange={(e) => setEditingMsrp({ ...editingMsrp, value: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === "Enter") saveMsrp(); if (e.key === "Escape") setEditingMsrp(null); }}
+                                    className="w-16 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none"
+                                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.gold}`, color: C.text }}
+                                    autoFocus />
+                                  <button onClick={saveMsrp} style={{ color: C.green }} className="text-xs">✓</button>
+                                  <button onClick={() => setEditingMsrp(null)} style={{ color: C.muted }} className="text-xs">✕</button>
+                                </span>
+                              ) : (
+                                <button onClick={() => setEditingMsrp({ dealId: deal.dealId, productId: deal.productId, value: deal.msrp.toFixed(2) })}
+                                  className="hover:underline underline-offset-2 decoration-dashed cursor-pointer tabular-nums"
+                                  style={{ color: C.muted }}>${deal.msrp.toFixed(2)}</button>
+                              )}
+                            </td>
+                            <td className="py-2 text-right font-medium tabular-nums" style={{ color: deal.netProfit > 0 ? C.green : C.red }}>${deal.netProfit.toFixed(2)}</td>
+                            <td className="py-2 text-right">
+                              <span className="text-[11px] tabular-nums" style={{ color: deal.roi >= 200 ? C.green : deal.roi >= 100 ? C.amber : C.muted }}>{deal.roi}%</span>
+                            </td>
+                            <td className="py-2 text-right tabular-nums" style={{ color: C.text }}>{deal.floorQty + deal.backroomQty}</td>
+                            <td className="py-2 text-right">
+                              <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-sm" style={{ background: "rgba(255,255,255,0.04)", color: C.muted }}>{deal.aisle}</span>
+                            </td>
+                            <td className="py-2 text-right">
+                              <button onClick={() => toggleDeal(deal.dealId, deal.excluded)} className="text-[11px] px-2 py-0.5 rounded-sm transition-colors"
+                                style={{ background: deal.excluded ? "rgba(74,186,106,0.08)" : "rgba(255,255,255,0.03)", color: deal.excluded ? C.green : C.muted, border: `1px solid ${deal.excluded ? "rgba(74,186,106,0.12)" : "rgba(255,255,255,0.04)"}` }}>
+                                {deal.excluded ? "Add" : "Skip"}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile cards */}
+                  <div className="md:hidden space-y-2">
+                    {store.deals.map((deal) => (
+                      <div key={deal.dealId} className="rounded-md p-3" style={{ opacity: deal.excluded ? 0.25 : 1, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}` }}>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="min-w-0">
                             {deal.productUrl ? (
-                              <a href={deal.productUrl} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-2" style={{ color: C.gold }}>
+                              <a href={deal.productUrl} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline underline-offset-2 block" style={{ color: C.gold }}>
                                 {deal.productName}
                               </a>
                             ) : (
-                              <span style={{ color: C.text }}>{deal.productName}</span>
+                              <span className="text-sm" style={{ color: C.text }}>{deal.productName}</span>
                             )}
-                            {deal.isLowestPrice && <span className="ml-1.5 text-[9px] px-1 py-px rounded-sm" style={{ background: "rgba(212,162,78,0.12)", color: C.amber, border: "1px solid rgba(212,162,78,0.15)" }}>LOW</span>}
-                          </td>
-                          <td className="py-2 text-right tabular-nums" style={{ color: C.amber }}>${deal.storePrice.toFixed(2)}</td>
-                          <td className="py-2 text-right">
-                            {editingMsrp?.dealId === deal.dealId ? (
-                              <span className="inline-flex items-center gap-1">
-                                <input
-                                  type="number" step="0.01"
-                                  value={editingMsrp.value}
-                                  onChange={(e) => setEditingMsrp({ ...editingMsrp, value: e.target.value })}
-                                  onKeyDown={(e) => { if (e.key === "Enter") saveMsrp(); if (e.key === "Escape") setEditingMsrp(null); }}
-                                  className="w-16 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none"
-                                  style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.gold}`, color: C.text }}
-                                  autoFocus
-                                />
-                                <button onClick={saveMsrp} style={{ color: C.green }} className="text-xs">✓</button>
-                                <button onClick={() => setEditingMsrp(null)} style={{ color: C.muted }} className="text-xs">✕</button>
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => setEditingMsrp({ dealId: deal.dealId, productId: deal.productId, value: deal.msrp.toFixed(2) })}
-                                className="hover:underline underline-offset-2 decoration-dashed cursor-pointer tabular-nums"
-                                style={{ color: C.muted }}
-                              >
-                                ${deal.msrp.toFixed(2)}
-                              </button>
-                            )}
-                          </td>
-                          <td className="py-2 text-right font-medium tabular-nums" style={{ color: deal.netProfit > 0 ? C.green : C.red }}>
-                            ${deal.netProfit.toFixed(2)}
-                          </td>
-                          <td className="py-2 text-right">
-                            <span className="text-[11px] tabular-nums" style={{ color: deal.roi >= 200 ? C.green : deal.roi >= 100 ? C.amber : C.muted }}>
-                              {deal.roi}%
-                            </span>
-                          </td>
-                          <td className="py-2 text-right tabular-nums" style={{ color: C.text }}>{deal.floorQty + deal.backroomQty}</td>
-                          <td className="py-2 text-right">
-                            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-sm" style={{ background: "rgba(255,255,255,0.04)", color: C.muted }}>
-                              {deal.aisle}
-                            </span>
-                          </td>
-                          <td className="py-2 text-right">
-                            <button
-                              onClick={() => toggleDeal(deal.dealId, deal.excluded)}
-                              className="text-[11px] px-2 py-0.5 rounded-sm transition-colors"
-                              style={{
-                                background: deal.excluded ? "rgba(74,186,106,0.08)" : "rgba(255,255,255,0.03)",
-                                color: deal.excluded ? C.green : C.muted,
-                                border: `1px solid ${deal.excluded ? "rgba(74,186,106,0.12)" : "rgba(255,255,255,0.04)"}`,
-                              }}
-                            >
-                              {deal.excluded ? "Add" : "Skip"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                          <button onClick={() => toggleDeal(deal.dealId, deal.excluded)} className="text-[11px] px-2.5 py-1 rounded-sm shrink-0"
+                            style={{ background: deal.excluded ? "rgba(74,186,106,0.08)" : "rgba(255,255,255,0.03)", color: deal.excluded ? C.green : C.muted, border: `1px solid ${deal.excluded ? "rgba(74,186,106,0.12)" : "rgba(255,255,255,0.04)"}` }}>
+                            {deal.excluded ? "Add" : "Skip"}
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Buy</span>
+                            <span className="tabular-nums font-medium" style={{ color: C.amber }}>${deal.storePrice.toFixed(2)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Sells</span>
+                            <button onClick={() => setEditingMsrp({ dealId: deal.dealId, productId: deal.productId, value: deal.msrp.toFixed(2) })}
+                              className="tabular-nums" style={{ color: C.muted }}>${deal.msrp.toFixed(2)}</button>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Net</span>
+                            <span className="tabular-nums font-semibold" style={{ color: deal.netProfit > 0 ? C.green : C.red }}>${deal.netProfit.toFixed(2)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>ROI</span>
+                            <span className="tabular-nums" style={{ color: deal.roi >= 200 ? C.green : deal.roi >= 100 ? C.amber : C.muted }}>{deal.roi}%</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Qty</span>
+                            <span className="tabular-nums" style={{ color: C.text }}>{deal.floorQty + deal.backroomQty}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Aisle</span>
+                            <span className="text-[11px] font-mono" style={{ color: C.muted }}>{deal.aisle}</span>
+                          </div>
+                        </div>
+                        {editingMsrp?.dealId === deal.dealId && (
+                          <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+                            <span className="text-xs" style={{ color: C.muted }}>Sell price: $</span>
+                            <input type="number" step="0.01" value={editingMsrp.value}
+                              onChange={(e) => setEditingMsrp({ ...editingMsrp, value: e.target.value })}
+                              className="w-20 rounded px-2 py-1 text-sm text-right focus:outline-none"
+                              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.gold}`, color: C.text }}
+                              autoFocus />
+                            <button onClick={saveMsrp} className="text-sm px-2 py-1 rounded" style={{ background: "rgba(74,186,106,0.1)", color: C.green }}>Save</button>
+                            <button onClick={() => setEditingMsrp(null)} className="text-sm" style={{ color: C.muted }}>Cancel</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
