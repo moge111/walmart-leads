@@ -249,7 +249,7 @@ export function StoreTable({ stores, onUpdate }: Props) {
                           </div>
                           <div>
                             <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Aisle</span>
-                            <span className="text-[11px] font-mono" style={{ color: C.muted }}>{deal.aisle}</span>
+                            <span className="text-sm font-mono font-semibold" style={{ color: "#eee" }}>{deal.aisle}</span>
                           </div>
                         </div>
                         {editingMsrp?.dealId === deal.dealId && (

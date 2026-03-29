@@ -59,28 +59,26 @@ export function RoutePlanner() {
       {route && route.stops.length > 0 && (
         <>
           {/* Summary */}
-          <div className="rounded-md p-5 mb-4 flex items-center justify-between" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
-            <div className="flex items-center gap-8">
+          <div className="rounded-md p-4 md:p-5 mb-4" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
                 <div className="text-[10px] tracking-widest uppercase mb-1" style={{ color: C.muted }}>Net Profit</div>
-                <div className="text-3xl font-semibold" style={{ color: C.green }}>${route.totalProfit.toFixed(2)}</div>
+                <div className="text-xl md:text-3xl font-semibold" style={{ color: C.green }}>${route.totalProfit.toFixed(2)}</div>
               </div>
-              <div className="w-px h-10" style={{ background: C.border }} />
               <div>
                 <div className="text-[10px] tracking-widest uppercase mb-1" style={{ color: C.muted }}>Distance</div>
-                <div className="text-2xl font-semibold" style={{ color: C.text }}>{route.totalDistance.toFixed(1)} mi</div>
+                <div className="text-xl md:text-2xl font-semibold" style={{ color: C.text }}>{route.totalDistance.toFixed(1)} mi</div>
               </div>
-              <div className="w-px h-10" style={{ background: C.border }} />
               <div>
                 <div className="text-[10px] tracking-widest uppercase mb-1" style={{ color: C.muted }}>Stops</div>
-                <div className="text-2xl font-semibold" style={{ color: C.text }}>{route.stops.length}</div>
+                <div className="text-xl md:text-2xl font-semibold" style={{ color: C.text }}>{route.stops.length}</div>
               </div>
             </div>
             {route.googleMapsUrl && (
               <a href={route.googleMapsUrl} target="_blank" rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
-                style={{ background: C.green, color: "#000" }}>
-                Open in Maps
+                className="block w-full text-center py-3 rounded-md text-sm font-semibold tracking-wide uppercase transition-colors"
+                style={{ background: C.gold, color: "#000" }}>
+                Open Route in Google Maps
               </a>
             )}
           </div>
