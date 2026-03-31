@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchPurchases, unpurchaseDeal } from "../lib/api";
+import { fetchPurchases, unpurchaseDeal, purchaseDeal } from "../lib/api";
 import type { Purchase } from "../lib/api";
 
 const C = {
@@ -20,6 +20,7 @@ interface Props {
 export function Purchases({ onUpdate }: Props) {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingQty, setEditingQty] = useState<{ dealId: number; value: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -39,6 +40,16 @@ export function Purchases({ onUpdate }: Props) {
     onUpdate();
   };
 
+  const saveQty = async () => {
+    if (!editingQty) return;
+    const qty = parseInt(editingQty.value);
+    if (isNaN(qty) || qty < 1) return;
+    await purchaseDeal(editingQty.dealId, qty);
+    setEditingQty(null);
+    load();
+    onUpdate();
+  };
+
   const totalSpent = purchases.reduce((s, p) => s + p.storePrice * p.purchasedQty, 0);
   const totalProfit = purchases.reduce((s, p) => s + p.totalProfit, 0);
   const totalUnits = purchases.reduce((s, p) => s + p.purchasedQty, 0);
@@ -53,6 +64,35 @@ export function Purchases({ onUpdate }: Props) {
       </div>
     );
   }
+
+  const QtyCell = ({ p }: { p: Purchase }) => {
+    if (editingQty?.dealId === p.dealId) {
+      return (
+        <span className="inline-flex items-center gap-1">
+          <input
+            type="number" min="1" value={editingQty.value}
+            onChange={(e) => setEditingQty({ ...editingQty, value: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") saveQty(); if (e.key === "Escape") setEditingQty(null); }}
+            className="w-12 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none"
+            style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.gold}`, color: C.text }}
+            autoFocus
+          />
+          <button onClick={saveQty} style={{ color: C.green }} className="text-xs">✓</button>
+          <button onClick={() => setEditingQty(null)} style={{ color: C.muted }} className="text-xs">✕</button>
+        </span>
+      );
+    }
+    return (
+      <button
+        onClick={() => setEditingQty({ dealId: p.dealId, value: String(p.purchasedQty) })}
+        className="tabular-nums hover:underline underline-offset-2 decoration-dashed"
+        style={{ color: C.text }}
+        title="Click to edit"
+      >
+        {p.purchasedQty}
+      </button>
+    );
+  };
 
   return (
     <div>
@@ -105,11 +145,11 @@ export function Purchases({ onUpdate }: Props) {
                 <td className="px-4 py-3 text-right">
                   <span className="text-[11px]" style={{ color: p.roi >= 200 ? C.green : p.roi >= 100 ? C.amber : C.muted }}>{p.roi}%</span>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums" style={{ color: C.text }}>{p.purchasedQty}</td>
+                <td className="px-4 py-3 text-right"><QtyCell p={p} /></td>
                 <td className="px-4 py-3 text-right tabular-nums font-semibold" style={{ color: C.green }}>${p.totalProfit.toFixed(2)}</td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => handleUndo(p.dealId)} className="text-[11px] px-2 py-0.5 rounded-sm"
-                    style={{ color: C.muted, border: `1px solid rgba(255,255,255,0.06)` }} title="Move back to leads">
+                    style={{ color: C.muted, border: `1px solid rgba(255,255,255,0.06)` }}>
                     Undo
                   </button>
                 </td>
@@ -139,7 +179,7 @@ export function Purchases({ onUpdate }: Props) {
                 Undo
               </button>
             </div>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-4 text-sm flex-wrap">
               <div>
                 <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Buy</span>
                 <span className="tabular-nums font-medium" style={{ color: C.amber }}>${p.storePrice.toFixed(2)}</span>
@@ -154,7 +194,7 @@ export function Purchases({ onUpdate }: Props) {
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Qty</span>
-                <span className="tabular-nums" style={{ color: C.text }}>{p.purchasedQty}</span>
+                <QtyCell p={p} />
               </div>
               <div>
                 <span className="text-[10px] uppercase tracking-wider block" style={{ color: C.muted }}>Total</span>
