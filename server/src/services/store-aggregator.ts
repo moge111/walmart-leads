@@ -29,6 +29,8 @@ export interface StoreDeal {
   aisle: string | null;
   isLowestPrice: boolean;
   excluded: boolean;
+  purchased: boolean;
+  purchasedQty: number;
 }
 
 export function getAggregatedStores(): AggregatedStore[] {
@@ -81,7 +83,9 @@ export function getAggregatedStores(): AggregatedStore[] {
       sd.backroom_qty,
       sd.aisle,
       sd.is_lowest_price,
-      sd.excluded
+      sd.excluded,
+      sd.purchased,
+      sd.purchased_qty
     FROM store_deals sd
     JOIN products p ON p.id = sd.product_id
     WHERE sd.store_id = ?
@@ -103,6 +107,8 @@ export function getAggregatedStores(): AggregatedStore[] {
       aisle: string | null;
       is_lowest_price: number;
       excluded: number;
+      purchased: number;
+      purchased_qty: number;
     }>;
 
     const distanceMiles = row.distance_miles || 1;
@@ -134,6 +140,8 @@ export function getAggregatedStores(): AggregatedStore[] {
         aisle: d.aisle,
         isLowestPrice: d.is_lowest_price === 1,
         excluded: d.excluded === 1,
+        purchased: d.purchased === 1,
+        purchasedQty: d.purchased_qty,
       })),
     };
   });

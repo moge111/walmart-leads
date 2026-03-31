@@ -14,6 +14,8 @@ export interface StoreDeal {
   aisle: string | null;
   isLowestPrice: boolean;
   excluded: boolean;
+  purchased: boolean;
+  purchasedQty: number;
 }
 
 export interface AggregatedStore {
@@ -102,6 +104,20 @@ export async function excludeDeal(dealId: number) {
 
 export async function includeDeal(dealId: number) {
   const res = await fetch(`${BASE}/api/leads/deals/${dealId}/include`, { method: "PATCH" });
+  return res.json();
+}
+
+export async function purchaseDeal(dealId: number, qty: number) {
+  const res = await fetch(`${BASE}/api/leads/deals/${dealId}/purchase`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ qty }),
+  });
+  return res.json();
+}
+
+export async function unpurchaseDeal(dealId: number) {
+  const res = await fetch(`${BASE}/api/leads/deals/${dealId}/unpurchase`, { method: "PATCH" });
   return res.json();
 }
 

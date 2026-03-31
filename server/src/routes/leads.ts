@@ -86,6 +86,27 @@ router.patch("/deals/:id/include", (req, res) => {
   res.json({ included: true });
 });
 
+// PATCH /api/leads/deals/:id/purchase
+router.patch("/deals/:id/purchase", (req, res) => {
+  const db = getDb();
+  const { id } = req.params;
+  const { qty } = req.body;
+  if (qty == null || isNaN(qty) || qty < 0) {
+    res.status(400).json({ error: "qty required" });
+    return;
+  }
+  db.prepare("UPDATE store_deals SET purchased = 1, purchased_qty = ? WHERE id = ?").run(qty, id);
+  res.json({ purchased: true, qty });
+});
+
+// PATCH /api/leads/deals/:id/unpurchase
+router.patch("/deals/:id/unpurchase", (req, res) => {
+  const db = getDb();
+  const { id } = req.params;
+  db.prepare("UPDATE store_deals SET purchased = 0, purchased_qty = 0 WHERE id = ?").run(id);
+  res.json({ purchased: false });
+});
+
 // DELETE /api/leads — clear all leads
 router.delete("/", (req, res) => {
   const db = getDb();

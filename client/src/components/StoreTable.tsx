@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AggregatedStore } from "../lib/api";
-import { excludeDeal, includeDeal, updateMsrp } from "../lib/api";
+import { excludeDeal, includeDeal, updateMsrp, purchaseDeal, unpurchaseDeal } from "../lib/api";
 
 interface Props {
   stores: AggregatedStore[];
@@ -25,6 +25,7 @@ export function StoreTable({ stores, onUpdate }: Props) {
   const [expandedStore, setExpandedStore] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"score" | "profit" | "distance" | "deals">("score");
   const [editingMsrp, setEditingMsrp] = useState<{ dealId: number; productId: number; value: string } | null>(null);
+  const [purchasingDeal, setPurchasingDeal] = useState<{ dealId: number; qty: string } | null>(null);
 
   const sorted = [...stores].sort((a, b) => {
     switch (sortBy) {
@@ -38,6 +39,20 @@ export function StoreTable({ stores, onUpdate }: Props) {
   const toggleDeal = async (dealId: number, excluded: boolean) => {
     if (excluded) await includeDeal(dealId);
     else await excludeDeal(dealId);
+    onUpdate();
+  };
+
+  const savePurchase = async () => {
+    if (!purchasingDeal) return;
+    const qty = parseInt(purchasingDeal.qty);
+    if (isNaN(qty) || qty < 0) return;
+    await purchaseDeal(purchasingDeal.dealId, qty);
+    setPurchasingDeal(null);
+    onUpdate();
+  };
+
+  const handleUnpurchase = async (dealId: number) => {
+    await unpurchaseDeal(dealId);
     onUpdate();
   };
 
@@ -151,6 +166,7 @@ export function StoreTable({ stores, onUpdate }: Props) {
                           <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-14">ROI</th>
                           <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-10">Qty</th>
                           <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-16">Aisle</th>
+                          <th className="pb-2 text-right text-[10px] tracking-widest uppercase font-normal w-20">Got</th>
                           <th className="pb-2 w-14"></th>
                         </tr>
                       </thead>
@@ -193,6 +209,31 @@ export function StoreTable({ stores, onUpdate }: Props) {
                             <td className="py-2 text-right tabular-nums" style={{ color: C.text }}>{deal.floorQty + deal.backroomQty}</td>
                             <td className="py-2 text-right">
                               <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-sm" style={{ background: "rgba(255,255,255,0.04)", color: C.muted }}>{deal.aisle}</span>
+                            </td>
+                            <td className="py-2 text-right">
+                              {deal.purchased ? (
+                                <button onClick={() => handleUnpurchase(deal.dealId)} className="text-[11px] px-2 py-0.5 rounded-sm" title="Click to undo"
+                                  style={{ background: "rgba(200,164,78,0.1)", color: C.gold, border: "1px solid rgba(200,164,78,0.2)" }}>
+                                  ✓ {deal.purchasedQty}
+                                </button>
+                              ) : purchasingDeal?.dealId === deal.dealId ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <input type="number" min="0" value={purchasingDeal.qty}
+                                    onChange={(e) => setPurchasingDeal({ ...purchasingDeal, qty: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === "Enter") savePurchase(); if (e.key === "Escape") setPurchasingDeal(null); }}
+                                    className="w-12 rounded px-1.5 py-0.5 text-xs text-right focus:outline-none"
+                                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.gold}`, color: C.text }}
+                                    autoFocus />
+                                  <button onClick={savePurchase} style={{ color: C.green }} className="text-xs">✓</button>
+                                  <button onClick={() => setPurchasingDeal(null)} style={{ color: C.muted }} className="text-xs">✕</button>
+                                </span>
+                              ) : (
+                                <button onClick={() => setPurchasingDeal({ dealId: deal.dealId, qty: String(deal.floorQty + deal.backroomQty) })}
+                                  className="text-[11px] px-2 py-0.5 rounded-sm transition-colors"
+                                  style={{ background: "rgba(200,164,78,0.06)", color: C.gold, border: "1px solid rgba(200,164,78,0.12)" }}>
+                                  Bought
+                                </button>
+                              )}
                             </td>
                             <td className="py-2 text-right">
                               <button onClick={() => toggleDeal(deal.dealId, deal.excluded)} className="text-[11px] px-2 py-0.5 rounded-sm transition-colors"
@@ -264,6 +305,32 @@ export function StoreTable({ stores, onUpdate }: Props) {
                             <button onClick={() => setEditingMsrp(null)} className="text-sm" style={{ color: C.muted }}>Cancel</button>
                           </div>
                         )}
+                        <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+                          {deal.purchased ? (
+                            <button onClick={() => handleUnpurchase(deal.dealId)}
+                              className="w-full py-1.5 rounded text-sm font-medium"
+                              style={{ background: "rgba(200,164,78,0.1)", color: C.gold, border: "1px solid rgba(200,164,78,0.2)" }}>
+                              ✓ Bought {deal.purchasedQty} — tap to undo
+                            </button>
+                          ) : purchasingDeal?.dealId === deal.dealId ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm" style={{ color: C.muted }}>How many?</span>
+                              <input type="number" min="0" value={purchasingDeal.qty}
+                                onChange={(e) => setPurchasingDeal({ ...purchasingDeal, qty: e.target.value })}
+                                className="w-16 rounded px-2 py-1 text-sm text-right focus:outline-none"
+                                style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.gold}`, color: C.text }}
+                                autoFocus />
+                              <button onClick={savePurchase} className="px-3 py-1 rounded text-sm" style={{ background: "rgba(74,186,106,0.1)", color: C.green }}>Save</button>
+                              <button onClick={() => setPurchasingDeal(null)} className="text-sm" style={{ color: C.muted }}>Cancel</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setPurchasingDeal({ dealId: deal.dealId, qty: String(deal.floorQty + deal.backroomQty) })}
+                              className="w-full py-1.5 rounded text-sm font-medium"
+                              style={{ background: "rgba(200,164,78,0.06)", color: C.gold, border: "1px solid rgba(200,164,78,0.12)" }}>
+                              Mark as Bought
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

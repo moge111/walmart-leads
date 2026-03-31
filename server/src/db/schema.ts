@@ -36,6 +36,8 @@ export function initializeDatabase() {
       unit_profit REAL NOT NULL,
       is_lowest_price INTEGER NOT NULL DEFAULT 0,
       excluded INTEGER NOT NULL DEFAULT 0,
+      purchased INTEGER NOT NULL DEFAULT 0,
+      purchased_qty INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(store_id, product_id)
     );
@@ -61,4 +63,8 @@ export function initializeDatabase() {
       profit_at_stop REAL
     );
   `);
+
+  // Migrations — safe to run on existing DBs
+  try { db.exec(`ALTER TABLE store_deals ADD COLUMN purchased INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.exec(`ALTER TABLE store_deals ADD COLUMN purchased_qty INTEGER NOT NULL DEFAULT 0`); } catch {}
 }
