@@ -31,7 +31,7 @@ export interface StoreDeal {
   excluded: boolean;
 }
 
-export function getAggregatedStores(hoursBack = 24): AggregatedStore[] {
+export function getAggregatedStores(hoursBack = 72): AggregatedStore[] {
   const db = getDb();
 
   const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
