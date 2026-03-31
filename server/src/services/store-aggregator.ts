@@ -31,10 +31,9 @@ export interface StoreDeal {
   excluded: boolean;
 }
 
-export function getAggregatedStores(hoursBack = 72): AggregatedStore[] {
+export function getAggregatedStores(): AggregatedStore[] {
   const db = getDb();
 
-  const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
   const minProfit = parseFloat(process.env.MIN_PROFIT_PER_UNIT || "5");
 
   const storeRows = db.prepare(`
@@ -51,13 +50,12 @@ export function getAggregatedStores(hoursBack = 72): AggregatedStore[] {
       SUM(CASE WHEN sd.excluded = 0 THEN sd.floor_qty + sd.backroom_qty ELSE 0 END) as total_qty
     FROM stores s
     JOIN store_deals sd ON sd.store_id = s.id
-    WHERE sd.created_at >= ?
-      AND sd.aisle IS NOT NULL AND sd.aisle != ''
+    WHERE sd.aisle IS NOT NULL AND sd.aisle != ''
       AND sd.unit_profit >= ?
     GROUP BY s.id
     HAVING total_qty > 0
     ORDER BY (total_profit / NULLIF(s.distance_miles, 0)) DESC
-  `).all(cutoff, minProfit) as Array<{
+  `).all(minProfit) as Array<{
     store_id: number;
     store_number: number;
     city: string;
@@ -86,13 +84,13 @@ export function getAggregatedStores(hoursBack = 72): AggregatedStore[] {
       sd.excluded
     FROM store_deals sd
     JOIN products p ON p.id = sd.product_id
-    WHERE sd.store_id = ? AND sd.created_at >= ?
+    WHERE sd.store_id = ?
       AND sd.aisle IS NOT NULL AND sd.aisle != ''
       AND sd.unit_profit >= ?
   `);
 
   return storeRows.map((row) => {
-    const deals = dealStmt.all(row.store_id, cutoff, minProfit) as Array<{
+    const deals = dealStmt.all(row.store_id, minProfit) as Array<{
       deal_id: number;
       product_id: number;
       product_name: string;
