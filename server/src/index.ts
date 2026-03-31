@@ -7,6 +7,7 @@ import { createBot } from "./bot.js";
 import leadsRouter from "./routes/leads.js";
 import storesRouter from "./routes/stores.js";
 import routesRouter from "./routes/routes.js";
+import purchasesRouter from "./routes/purchases.js";
 
 const PORT = parseInt(process.env.API_PORT || "3001");
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use("/api/leads", leadsRouter);
 app.use("/api/stores", storesRouter);
 app.use("/api/route", routesRouter);
+app.use("/api/purchases", purchasesRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

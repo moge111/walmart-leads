@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AggregatedStore } from "../lib/api";
-import { excludeDeal, includeDeal, updateMsrp, purchaseDeal, unpurchaseDeal } from "../lib/api";
+import { excludeDeal, includeDeal, updateMsrp, purchaseDeal } from "../lib/api";
 
 interface Props {
   stores: AggregatedStore[];
@@ -48,11 +48,6 @@ export function StoreTable({ stores, onUpdate }: Props) {
     if (isNaN(qty) || qty < 0) return;
     await purchaseDeal(purchasingDeal.dealId, qty);
     setPurchasingDeal(null);
-    onUpdate();
-  };
-
-  const handleUnpurchase = async (dealId: number) => {
-    await unpurchaseDeal(dealId);
     onUpdate();
   };
 
@@ -211,12 +206,7 @@ export function StoreTable({ stores, onUpdate }: Props) {
                               <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-sm" style={{ background: "rgba(255,255,255,0.04)", color: C.muted }}>{deal.aisle}</span>
                             </td>
                             <td className="py-2 text-right">
-                              {deal.purchased ? (
-                                <button onClick={() => handleUnpurchase(deal.dealId)} className="text-[11px] px-2 py-0.5 rounded-sm" title="Click to undo"
-                                  style={{ background: "rgba(200,164,78,0.1)", color: C.gold, border: "1px solid rgba(200,164,78,0.2)" }}>
-                                  ✓ {deal.purchasedQty}
-                                </button>
-                              ) : purchasingDeal?.dealId === deal.dealId ? (
+                              {purchasingDeal?.dealId === deal.dealId ? (
                                 <span className="inline-flex items-center gap-1">
                                   <input type="number" min="0" value={purchasingDeal.qty}
                                     onChange={(e) => setPurchasingDeal({ ...purchasingDeal, qty: e.target.value })}
@@ -306,13 +296,7 @@ export function StoreTable({ stores, onUpdate }: Props) {
                           </div>
                         )}
                         <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
-                          {deal.purchased ? (
-                            <button onClick={() => handleUnpurchase(deal.dealId)}
-                              className="w-full py-1.5 rounded text-sm font-medium"
-                              style={{ background: "rgba(200,164,78,0.1)", color: C.gold, border: "1px solid rgba(200,164,78,0.2)" }}>
-                              ✓ Bought {deal.purchasedQty} — tap to undo
-                            </button>
-                          ) : purchasingDeal?.dealId === deal.dealId ? (
+                          {purchasingDeal?.dealId === deal.dealId ? (
                             <div className="flex items-center gap-2">
                               <span className="text-sm" style={{ color: C.muted }}>How many?</span>
                               <input type="number" min="0" value={purchasingDeal.qty}

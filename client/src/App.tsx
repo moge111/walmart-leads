@@ -2,38 +2,41 @@ import { useState, useEffect, useCallback } from "react";
 import { StoreTable } from "./components/StoreTable";
 import { RoutePlanner } from "./components/RoutePlanner";
 import { PasteBox } from "./components/PasteBox";
-import { fetchStores, clearLeads } from "./lib/api";
-import type { AggregatedStore } from "./lib/api";
+import { Purchases } from "./components/Purchases";
+import { fetchStores, clearLeads, fetchPurchases } from "./lib/api";
+import type { AggregatedStore, Purchase } from "./lib/api";
 
-type Tab = "stores" | "route" | "paste";
+type Tab = "stores" | "route" | "paste" | "purchases";
 
 function App() {
   const [tab, setTab] = useState<Tab>("stores");
   const [stores, setStores] = useState<AggregatedStore[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadStores = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchStores();
-      setStores(data);
+      const [storeData, purchaseData] = await Promise.all([fetchStores(), fetchPurchases()]);
+      setStores(storeData);
+      setPurchases(purchaseData);
     } catch {
-      console.error("Failed to fetch stores");
+      console.error("Failed to fetch data");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadStores();
-    const interval = setInterval(loadStores, 30000);
+    loadAll();
+    const interval = setInterval(loadAll, 30000);
     return () => clearInterval(interval);
-  }, [loadStores]);
+  }, [loadAll]);
 
   const handleClear = async () => {
     if (confirm("Clear all leads and start fresh?")) {
       await clearLeads();
-      loadStores();
+      loadAll();
     }
   };
 
@@ -52,7 +55,7 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-5">
-            <button onClick={loadStores} className="text-xs tracking-wide uppercase" style={{ color: "#555" }}>
+            <button onClick={loadAll} className="text-xs tracking-wide uppercase" style={{ color: "#555" }}>
               Refresh
             </button>
             <button onClick={handleClear} className="text-xs tracking-wide uppercase" style={{ color: "#8b4444" }}>
@@ -82,8 +85,8 @@ function App() {
 
         {/* Tabs */}
         <div className="flex gap-0 mb-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          {(["stores", "route", "paste"] as Tab[]).map((t) => {
-            const labels: Record<Tab, string> = { stores: "Stores", route: "Route", paste: "Paste" };
+          {(["stores", "route", "paste", "purchases"] as Tab[]).map((t) => {
+            const labels: Record<Tab, string> = { stores: "Stores", route: "Route", paste: "Paste", purchases: "Purchases" };
             const isActive = tab === t;
             return (
               <button
@@ -101,6 +104,11 @@ function App() {
                     {stores.length}
                   </span>
                 )}
+                {t === "purchases" && purchases.length > 0 && (
+                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-sm" style={{ background: isActive ? "rgba(200,164,78,0.15)" : "rgba(255,255,255,0.04)", color: isActive ? "#c8a44e" : "#5a5549" }}>
+                    {purchases.length}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -110,9 +118,10 @@ function App() {
           <div className="text-center py-20" style={{ color: "#555" }}>Loading...</div>
         ) : (
           <>
-            {tab === "stores" && <StoreTable stores={stores} onUpdate={loadStores} />}
+            {tab === "stores" && <StoreTable stores={stores} onUpdate={loadAll} />}
             {tab === "route" && <RoutePlanner />}
-            {tab === "paste" && <PasteBox onParsed={loadStores} />}
+            {tab === "paste" && <PasteBox onParsed={loadAll} />}
+            {tab === "purchases" && <Purchases onUpdate={loadAll} />}
           </>
         )}
       </div>

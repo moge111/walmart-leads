@@ -33,6 +33,23 @@ export interface StoreDeal {
   purchasedQty: number;
 }
 
+export interface Purchase {
+  dealId: number;
+  productId: number;
+  productName: string;
+  productUrl: string | null;
+  storeNumber: number;
+  city: string;
+  state: string;
+  storePrice: number;
+  msrp: number;
+  netProfit: number;
+  roi: number;
+  purchasedQty: number;
+  totalProfit: number;
+  purchasedAt: string;
+}
+
 export function getAggregatedStores(): AggregatedStore[] {
   const db = getDb();
 
@@ -47,13 +64,14 @@ export function getAggregatedStores(): AggregatedStore[] {
       s.address,
       s.zip,
       s.distance_miles,
-      COUNT(CASE WHEN sd.excluded = 0 THEN 1 END) as deal_count,
-      SUM(CASE WHEN sd.excluded = 0 THEN sd.unit_profit * (sd.floor_qty + sd.backroom_qty) ELSE 0 END) as total_profit,
-      SUM(CASE WHEN sd.excluded = 0 THEN sd.floor_qty + sd.backroom_qty ELSE 0 END) as total_qty
+      COUNT(CASE WHEN sd.excluded = 0 AND sd.purchased = 0 THEN 1 END) as deal_count,
+      SUM(CASE WHEN sd.excluded = 0 AND sd.purchased = 0 THEN sd.unit_profit * (sd.floor_qty + sd.backroom_qty) ELSE 0 END) as total_profit,
+      SUM(CASE WHEN sd.excluded = 0 AND sd.purchased = 0 THEN sd.floor_qty + sd.backroom_qty ELSE 0 END) as total_qty
     FROM stores s
     JOIN store_deals sd ON sd.store_id = s.id
     WHERE sd.aisle IS NOT NULL AND sd.aisle != ''
       AND sd.unit_profit >= ?
+      AND sd.purchased = 0
     GROUP BY s.id
     HAVING total_qty > 0
     ORDER BY (total_profit / NULLIF(s.distance_miles, 0)) DESC
@@ -91,6 +109,7 @@ export function getAggregatedStores(): AggregatedStore[] {
     WHERE sd.store_id = ?
       AND sd.aisle IS NOT NULL AND sd.aisle != ''
       AND sd.unit_profit >= ?
+      AND sd.purchased = 0
   `);
 
   return storeRows.map((row) => {
@@ -145,4 +164,59 @@ export function getAggregatedStores(): AggregatedStore[] {
       })),
     };
   });
+}
+
+export function getPurchases(): Purchase[] {
+  const db = getDb();
+
+  const rows = db.prepare(`
+    SELECT
+      sd.id as deal_id,
+      p.id as product_id,
+      p.name as product_name,
+      p.product_url,
+      s.store_number,
+      s.city,
+      s.state,
+      sd.store_price,
+      p.msrp,
+      sd.unit_profit,
+      sd.purchased_qty,
+      sd.created_at as purchased_at
+    FROM store_deals sd
+    JOIN products p ON p.id = sd.product_id
+    JOIN stores s ON s.id = sd.store_id
+    WHERE sd.purchased = 1
+    ORDER BY sd.created_at DESC
+  `).all() as Array<{
+    deal_id: number;
+    product_id: number;
+    product_name: string;
+    product_url: string | null;
+    store_number: number;
+    city: string;
+    state: string;
+    store_price: number;
+    msrp: number;
+    unit_profit: number;
+    purchased_qty: number;
+    purchased_at: string;
+  }>;
+
+  return rows.map((r) => ({
+    dealId: r.deal_id,
+    productId: r.product_id,
+    productName: r.product_name,
+    productUrl: r.product_url,
+    storeNumber: r.store_number,
+    city: r.city,
+    state: r.state,
+    storePrice: r.store_price,
+    msrp: r.msrp,
+    netProfit: r.unit_profit,
+    roi: r.store_price > 0 ? Math.round((r.unit_profit / r.store_price) * 100) : 0,
+    purchasedQty: r.purchased_qty,
+    totalProfit: r.unit_profit * r.purchased_qty,
+    purchasedAt: r.purchased_at,
+  }));
 }

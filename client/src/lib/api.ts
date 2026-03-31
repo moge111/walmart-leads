@@ -47,6 +47,23 @@ export interface PlannedRoute {
   googleMapsUrl: string;
 }
 
+export interface Purchase {
+  dealId: number;
+  productId: number;
+  productName: string;
+  productUrl: string | null;
+  storeNumber: number;
+  city: string;
+  state: string;
+  storePrice: number;
+  msrp: number;
+  netProfit: number;
+  roi: number;
+  purchasedQty: number;
+  totalProfit: number;
+  purchasedAt: string;
+}
+
 export interface Lead {
   id: number;
   name: string;
@@ -132,5 +149,10 @@ export async function updateMsrp(productId: number, msrp: number) {
 
 export async function fetchConfig() {
   const res = await fetch(`${BASE}/api/leads/config`);
+  return res.json();
+}
+
+export async function fetchPurchases(): Promise<Purchase[]> {
+  const res = await fetch(`${BASE}/api/purchases`);
   return res.json();
 }
