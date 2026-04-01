@@ -5,6 +5,9 @@ import { excludeDeal, includeDeal, updateMsrp, purchaseDeal } from "../lib/api";
 interface Props {
   stores: AggregatedStore[];
   onUpdate: () => void;
+  selectedStoreIds: number[];
+  onSelectionChange: (ids: number[]) => void;
+  onPlanRoute: (ids: number[]) => void;
 }
 
 const C = {
@@ -21,8 +24,17 @@ const C = {
   dim: "#333",
 };
 
-export function StoreTable({ stores, onUpdate }: Props) {
+export function StoreTable({ stores, onUpdate, selectedStoreIds, onSelectionChange, onPlanRoute }: Props) {
   const [expandedStore, setExpandedStore] = useState<number | null>(null);
+  const selectedSet = new Set(selectedStoreIds);
+
+  const toggleStoreSelect = (storeId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = new Set(selectedSet);
+    if (next.has(storeId)) next.delete(storeId);
+    else next.add(storeId);
+    onSelectionChange(Array.from(next));
+  };
   const [sortBy, setSortBy] = useState<"score" | "profit" | "distance" | "deals">("score");
   const [editingMsrp, setEditingMsrp] = useState<{ dealId: number; productId: number; value: string } | null>(null);
   const [purchasingDeal, setPurchasingDeal] = useState<{ dealId: number; qty: string } | null>(null);
@@ -71,6 +83,18 @@ export function StoreTable({ stores, onUpdate }: Props) {
 
   return (
     <div>
+      {selectedStoreIds.length > 0 && (
+        <div className="flex items-center justify-between mb-4 px-4 py-3 rounded-md" style={{ background: "rgba(200,164,78,0.08)", border: "1px solid rgba(200,164,78,0.2)" }}>
+          <span className="text-sm" style={{ color: C.gold }}>{selectedStoreIds.length} store{selectedStoreIds.length > 1 ? "s" : ""} selected</span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => onSelectionChange([])} className="text-xs" style={{ color: C.muted }}>Clear</button>
+            <button onClick={() => onPlanRoute(selectedStoreIds)} className="text-sm font-semibold px-4 py-1.5 rounded-md" style={{ background: C.gold, color: "#000" }}>
+              Plan Route →
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-5">
         {(["score", "profit", "distance", "deals"] as const).map((key) => (
           <button
@@ -94,10 +118,22 @@ export function StoreTable({ stores, onUpdate }: Props) {
           const bestRoi = Math.max(...store.deals.filter(d => !d.excluded).map(d => d.roi), 0);
 
           return (
-            <div key={store.storeId} className="rounded-md overflow-hidden" style={{ background: isExpanded ? C.bg : "transparent", border: `1px solid ${isExpanded ? C.borderHover : C.border}` }}>
+            <div key={store.storeId} className="rounded-md overflow-hidden" style={{ background: isExpanded ? C.bg : "transparent", border: `1px solid ${selectedSet.has(store.storeId) ? "rgba(200,164,78,0.3)" : isExpanded ? C.borderHover : C.border}` }}>
+              <div className="flex items-stretch">
+                <button
+                  onClick={(e) => toggleStoreSelect(store.storeId, e)}
+                  className="flex items-center justify-center px-3 shrink-0 transition-colors"
+                  style={{ background: selectedSet.has(store.storeId) ? "rgba(200,164,78,0.1)" : "transparent" }}
+                  title="Select for route"
+                >
+                  <div className="w-4 h-4 rounded flex items-center justify-center"
+                    style={{ border: `1.5px solid ${selectedSet.has(store.storeId) ? C.gold : C.dim}`, background: selectedSet.has(store.storeId) ? C.gold : "transparent" }}>
+                    {selectedSet.has(store.storeId) && <span style={{ color: "#000", fontSize: 10, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                  </div>
+                </button>
               <button
                 onClick={() => setExpandedStore(isExpanded ? null : store.storeId)}
-                className="w-full px-4 py-3.5 text-left transition-colors"
+                className="flex-1 px-4 py-3.5 text-left transition-colors"
                 style={{ background: isExpanded ? C.bg : "rgba(17,17,17,0.5)" }}
                 onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = C.bg; }}
                 onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = "rgba(17,17,17,0.5)"; }}
@@ -142,6 +178,7 @@ export function StoreTable({ stores, onUpdate }: Props) {
                   </div>
                 </div>
               </button>
+              </div>
 
               {isExpanded && (
                 <div className="px-4 pb-4" style={{ borderTop: `1px solid ${C.border}` }}>

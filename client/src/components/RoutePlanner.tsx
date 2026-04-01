@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { PlannedRoute } from "../lib/api";
 import { fetchRoute } from "../lib/api";
 
@@ -12,49 +12,74 @@ const C = {
   text: "#ccc",
 };
 
-export function RoutePlanner() {
+interface Props {
+  selectedStoreIds: number[];
+  onClearSelection: () => void;
+}
+
+export function RoutePlanner({ selectedStoreIds, onClearSelection }: Props) {
   const [route, setRoute] = useState<PlannedRoute | null>(null);
   const [loading, setLoading] = useState(false);
   const [maxStops, setMaxStops] = useState(8);
   const [minProfit, setMinProfit] = useState(5);
   const [maxDistance, setMaxDistance] = useState(100);
 
-  const generateRoute = async () => {
+  const generateRoute = async (storeIds?: number[]) => {
     setLoading(true);
-    try { setRoute(await fetchRoute({ maxStops, minProfit, maxDistance })); }
-    finally { setLoading(false); }
+    try {
+      if (storeIds?.length) {
+        setRoute(await fetchRoute({ storeIds }));
+      } else {
+        setRoute(await fetchRoute({ maxStops, minProfit, maxDistance }));
+      }
+    } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (selectedStoreIds.length > 0) {
+      generateRoute(selectedStoreIds);
+    }
+  }, [selectedStoreIds]);
 
   const inputStyle = { background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, color: C.text };
 
   return (
     <div>
-      <div className="rounded-md p-5 mb-5" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
-        <div className="flex gap-5 items-end flex-wrap">
-          {[
-            { label: "Max Stops", value: maxStops, set: setMaxStops, w: "w-20" },
-            { label: "Min Net ($)", value: minProfit, set: setMinProfit, w: "w-20" },
-            { label: "Max Dist (mi)", value: maxDistance, set: setMaxDistance, w: "w-24" },
-          ].map((f) => (
-            <div key={f.label}>
-              <label className="block text-[10px] tracking-widest uppercase mb-1.5" style={{ color: C.muted }}>{f.label}</label>
-              <input
-                type="number" value={f.value}
-                onChange={(e) => f.set(Number(e.target.value))}
-                className={`${f.w} rounded-md px-3 py-2 text-sm focus:outline-none`}
-                style={inputStyle}
-              />
-            </div>
-          ))}
-          <button
-            onClick={generateRoute} disabled={loading}
-            className="px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50 transition-colors"
-            style={{ background: C.gold, color: "#000" }}
-          >
-            {loading ? "Planning..." : "Generate Route"}
+      {selectedStoreIds.length > 0 ? (
+        <div className="flex items-center justify-between mb-4 px-4 py-3 rounded-md" style={{ background: "rgba(200,164,78,0.08)", border: "1px solid rgba(200,164,78,0.2)" }}>
+          <span className="text-sm" style={{ color: C.gold }}>Route built from {selectedStoreIds.length} selected store{selectedStoreIds.length > 1 ? "s" : ""}</span>
+          <button onClick={() => { onClearSelection(); setRoute(null); }} className="text-xs" style={{ color: C.muted }}>
+            Clear — use all stores
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="rounded-md p-5 mb-5" style={{ background: C.bg, border: `1px solid ${C.border}` }}>
+          <div className="flex gap-5 items-end flex-wrap">
+            {[
+              { label: "Max Stops", value: maxStops, set: setMaxStops, w: "w-20" },
+              { label: "Min Net ($)", value: minProfit, set: setMinProfit, w: "w-20" },
+              { label: "Max Dist (mi)", value: maxDistance, set: setMaxDistance, w: "w-24" },
+            ].map((f) => (
+              <div key={f.label}>
+                <label className="block text-[10px] tracking-widest uppercase mb-1.5" style={{ color: C.muted }}>{f.label}</label>
+                <input
+                  type="number" value={f.value}
+                  onChange={(e) => f.set(Number(e.target.value))}
+                  className={`${f.w} rounded-md px-3 py-2 text-sm focus:outline-none`}
+                  style={inputStyle}
+                />
+              </div>
+            ))}
+            <button
+              onClick={() => generateRoute()} disabled={loading}
+              className="px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50 transition-colors"
+              style={{ background: C.gold, color: "#000" }}
+            >
+              {loading ? "Planning..." : "Generate Route"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {route && route.stops.length > 0 && (
         <>

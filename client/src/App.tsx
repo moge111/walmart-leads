@@ -13,6 +13,7 @@ function App() {
   const [stores, setStores] = useState<AggregatedStore[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -118,8 +119,16 @@ function App() {
           <div className="text-center py-20" style={{ color: "#555" }}>Loading...</div>
         ) : (
           <>
-            {tab === "stores" && <StoreTable stores={stores} onUpdate={loadAll} />}
-            {tab === "route" && <RoutePlanner />}
+            {tab === "stores" && (
+              <StoreTable
+                stores={stores}
+                onUpdate={loadAll}
+                selectedStoreIds={selectedStoreIds}
+                onSelectionChange={setSelectedStoreIds}
+                onPlanRoute={(ids) => { setSelectedStoreIds(ids); setTab("route"); }}
+              />
+            )}
+            {tab === "route" && <RoutePlanner selectedStoreIds={selectedStoreIds} onClearSelection={() => setSelectedStoreIds([])} />}
             {tab === "paste" && <PasteBox onParsed={loadAll} />}
             {tab === "purchases" && <Purchases onUpdate={loadAll} />}
           </>

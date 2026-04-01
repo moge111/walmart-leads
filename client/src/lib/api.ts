@@ -81,16 +81,16 @@ export async function fetchStores(hours = 24): Promise<AggregatedStore[]> {
 }
 
 export async function fetchRoute(options?: {
-  hours?: number;
   minProfit?: number;
   maxStops?: number;
   maxDistance?: number;
+  storeIds?: number[];
 }): Promise<PlannedRoute> {
   const params = new URLSearchParams();
-  if (options?.hours) params.set("hours", String(options.hours));
   if (options?.minProfit) params.set("minProfit", String(options.minProfit));
   if (options?.maxStops) params.set("maxStops", String(options.maxStops));
   if (options?.maxDistance) params.set("maxDistance", String(options.maxDistance));
+  if (options?.storeIds?.length) params.set("storeIds", options.storeIds.join(","));
   const res = await fetch(`${BASE}/api/route?${params}`);
   return res.json();
 }
