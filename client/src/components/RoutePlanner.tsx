@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { PlannedRoute } from "../lib/api";
-import { fetchRoute } from "../lib/api";
+import { fetchRoute, sendRouteToDiscord } from "../lib/api";
 
 const C = {
   bg: "#111",
@@ -20,6 +20,17 @@ interface Props {
 export function RoutePlanner({ selectedStoreIds, onClearSelection }: Props) {
   const [route, setRoute] = useState<PlannedRoute | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSendToDiscord = async () => {
+    setSending(true);
+    setSent(false);
+    await sendRouteToDiscord(selectedStoreIds.length ? selectedStoreIds : undefined);
+    setSending(false);
+    setSent(true);
+    setTimeout(() => setSent(false), 3000);
+  };
   const [maxStops, setMaxStops] = useState(8);
   const [minProfit, setMinProfit] = useState(5);
   const [maxDistance, setMaxDistance] = useState(100);
@@ -99,13 +110,23 @@ export function RoutePlanner({ selectedStoreIds, onClearSelection }: Props) {
                 <div className="text-xl md:text-2xl font-semibold" style={{ color: C.text }}>{route.stops.length}</div>
               </div>
             </div>
-            {route.googleMapsUrl && (
-              <a href={route.googleMapsUrl} target="_blank" rel="noopener noreferrer"
-                className="block w-full text-center py-3 rounded-md text-sm font-semibold tracking-wide uppercase transition-colors"
-                style={{ background: C.gold, color: "#000" }}>
-                Open Route in Google Maps
-              </a>
-            )}
+            <div className="flex flex-col gap-2">
+              {route.googleMapsUrl && (
+                <a href={route.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                  className="block w-full text-center py-3 rounded-md text-sm font-semibold tracking-wide uppercase transition-colors"
+                  style={{ background: C.gold, color: "#000" }}>
+                  Open Route in Google Maps
+                </a>
+              )}
+              <button
+                onClick={handleSendToDiscord}
+                disabled={sending}
+                className="w-full py-3 rounded-md text-sm font-semibold tracking-wide uppercase disabled:opacity-50 transition-colors"
+                style={{ background: sent ? "rgba(74,186,106,0.15)" : "rgba(88,101,242,0.15)", color: sent ? C.green : "#7289da", border: `1px solid ${sent ? "rgba(74,186,106,0.3)" : "rgba(88,101,242,0.3)"}` }}
+              >
+                {sent ? "✓ Sent to Discord" : sending ? "Sending..." : "Send to Discord"}
+              </button>
+            </div>
           </div>
 
           {/* Stops */}

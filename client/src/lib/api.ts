@@ -152,6 +152,15 @@ export async function fetchConfig() {
   return res.json();
 }
 
+export async function sendRouteToDiscord(storeIds?: number[]): Promise<{ sent: boolean; error?: string }> {
+  const res = await fetch(`${BASE}/api/route/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ storeIds }),
+  });
+  return res.json();
+}
+
 export async function fetchPurchases(): Promise<Purchase[]> {
   const res = await fetch(`${BASE}/api/purchases`);
   return res.json();

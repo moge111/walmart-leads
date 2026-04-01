@@ -37,6 +37,27 @@ function extractLead(message: Message) {
   return null;
 }
 
+let _client: Client | null = null;
+let _routeChannelId: string | null = null;
+
+export async function sendRouteToDiscord(storeIds?: number[]): Promise<boolean> {
+  if (!_client || !_routeChannelId) return false;
+  let stores = getAggregatedStores();
+  if (storeIds?.length) stores = stores.filter((s) => storeIds.includes(s.storeId));
+  if (stores.length === 0) return false;
+  const route = planRoute(stores, storeIds?.length ? { minProfitPerStore: 0, maxStops: stores.length, maxTotalDistance: 99999 } : undefined);
+  const msg = formatRouteForDiscord(route);
+  const channel = await _client.channels.fetch(_routeChannelId) as TextChannel;
+  if (!channel) return false;
+  if (msg.length > 2000) {
+    const chunks = msg.match(/[\s\S]{1,1900}/g) || [];
+    for (const chunk of chunks) await channel.send(chunk);
+  } else {
+    await channel.send(msg);
+  }
+  return true;
+}
+
 export function createBot(
   token: string,
   leadsChannelId: string,
@@ -49,6 +70,9 @@ export function createBot(
       GatewayIntentBits.MessageContent,
     ],
   });
+
+  _client = client;
+  _routeChannelId = routeChannelId;
 
   client.on("ready", async () => {
     console.log(`Bot logged in as ${client.user?.tag}`);
@@ -145,7 +169,7 @@ async function postRouteUpdate(client: Client, routeChannelId: string) {
     return;
   }
 
-  const stores = getAggregatedStores(24);
+  const stores = getAggregatedStores();
   if (stores.length === 0) return;
 
   const route = planRoute(stores);
@@ -162,10 +186,10 @@ async function postRouteUpdate(client: Client, routeChannelId: string) {
 }
 
 async function handleRouteCommand(client: Client, routeChannelId: string) {
-  const stores = getAggregatedStores(24);
+  const stores = getAggregatedStores();
   if (stores.length === 0) {
     const channel = await client.channels.fetch(routeChannelId) as TextChannel;
-    if (channel) await channel.send("No leads tracked in the last 24 hours. Forward some Tempo alerts first!");
+    if (channel) await channel.send("No active leads. Forward some Tempo alerts first!");
     return;
   }
   await postRouteUpdate(client, routeChannelId);

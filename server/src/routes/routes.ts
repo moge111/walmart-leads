@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getAggregatedStores } from "../services/store-aggregator.js";
 import { planRoute } from "../services/route-planner.js";
+import { sendRouteToDiscord } from "../bot.js";
 
 const router = Router();
 
@@ -23,6 +24,17 @@ router.get("/", (req, res) => {
 
   const route = planRoute(stores, { minProfitPerStore: minProfit, maxStops, maxTotalDistance: maxDistance });
   res.json(route);
+});
+
+// POST /api/route/send — post current route to Discord
+router.post("/send", async (req, res) => {
+  const { storeIds } = req.body as { storeIds?: number[] };
+  const sent = await sendRouteToDiscord(storeIds);
+  if (sent) {
+    res.json({ sent: true });
+  } else {
+    res.status(400).json({ sent: false, error: "Bot not connected or no stores to route" });
+  }
 });
 
 export default router;
